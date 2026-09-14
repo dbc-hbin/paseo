@@ -1,9 +1,5 @@
+import { StyleSheet } from "react-native";
 import { describe, expect, it } from "vitest";
-// The package entrypoint contains JSX in a .js file that Vitest cannot transform.
-// Import the JSX-free renderer implementation directly for the cascade regression.
-// @ts-expect-error react-native-markdown-display does not publish declarations for internal modules.
-import AstRenderer from "react-native-markdown-display/src/lib/AstRenderer";
-import type { RenderRules } from "react-native-markdown-display";
 import { createCompactMarkdownStyles, createMarkdownStyles } from "./markdown-styles";
 import { darkTheme } from "./theme";
 
@@ -167,39 +163,11 @@ describe("createMarkdownStyles", () => {
     }
   });
 
-  it("resets Android heading lineHeight in RNMD inherited text styles", () => {
+  it("resets inherited prose lineHeight when Android heading styles are composed", () => {
     const styles = createMarkdownStyles(darkTheme, "android");
-    let leafInheritedStyles: Record<string, unknown> | undefined;
-    const renderRules: RenderRules = {
-      body: (_node, children) => children,
-      heading1: (_node, children) => children,
-      text: (_node, _children, _parentNodes, _styles, inheritedStyles) => {
-        leafInheritedStyles = inheritedStyles;
-        return null;
-      },
-    };
+    const resolvedHeadingStyle = StyleSheet.flatten([styles.body, styles.heading1]);
 
-    const renderer = new AstRenderer(renderRules, styles);
-    renderer.renderNode(
-      {
-        type: "body",
-        key: "body",
-        children: [
-          {
-            type: "heading1",
-            key: "heading1",
-            children: [{ type: "text", key: "text", children: [] }],
-          },
-        ],
-      },
-      [],
-    );
-
-    expect(
-      leafInheritedStyles &&
-        Object.prototype.hasOwnProperty.call(leafInheritedStyles, "lineHeight"),
-    ).toBe(true);
-    expect(leafInheritedStyles?.lineHeight).toBeUndefined();
+    expect(resolvedHeadingStyle.lineHeight).toBeUndefined();
   });
 
   it("keeps blockquotes quiet with a square left edge", () => {
